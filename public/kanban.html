@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Healthy King LIFE - Lead Funnel Kanban Board (Lucknow)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            wellness: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              cream: '#FAFAF5',
+              orange: '#EA580C',
+              yellow: '#F59E0B'
+            },
+            whatsapp: {
+              light: '#DCFCE7',
+              base: '#25D366',
+              dark: '#128C7E'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- React & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Visitor Tracker -->
+  <script src="/tracker.js"></script>
+  <style>
+    .kanban-col {
+      min-width: 290px;
+      max-width: 320px;
+    }
+    .kanban-drag-over {
+      background-color: #f0fdf4 !important;
+      border: 2px dashed #059669 !important;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      height: 8px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAF6] text-gray-800 font-sans antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // Default Supabase Config (Overridable via localStorage or env)
+    const SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('HK_SUPABASE_URL') || "https://example.supabase.co";
+    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('HK_SUPABASE_ANON_KEY') || "dummy-anon-key";
+    
+    // Initialize Supabase Client
+    let supabase = null;
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch(e) {
+      console.warn("Supabase initialization fallback:", e);
+    }
+
+    // Lead Stages for the Funnel
+    const STAGES = [
+      { id: "Anonymous Visitor", label: "Anonymous Visitor", color: "bg-slate-100 text-slate-700 border-slate-300", badge: "bg-slate-200 text-slate-800" },
+      { id: "Lead Captured", label: "Lead Captured", color: "bg-emerald-50 text-emerald-800 border-emerald-300", badge: "bg-emerald-200 text-emerald-900" },
+      { id: "Wellness Goal Selected", label: "Goal Selected", color: "bg-teal-50 text-teal-800 border-teal-300", badge: "bg-teal-200 text-teal-900" },
+      { id: "WhatsApp Started", label: "WhatsApp Started", color: "bg-green-50 text-green-800 border-green-400", badge: "bg-green-500 text-white" },
+      { id: "Appointment Scheduled", label: "Appointment Booked", color: "bg-amber-50 text-amber-800 border-amber-300", badge: "bg-amber-200 text-amber-900" },
+      { id: "Consultation Completed", label: "Consultation Done", color: "bg-blue-50 text-blue-800 border-blue-300", badge: "bg-blue-200 text-blue-900" },
+      { id: "Active Customer", label: "Active Customer", color: "bg-emerald-100 text-emerald-900 border-emerald-400", badge: "bg-emerald-600 text-white" },
+      { id: "At Risk", label: "At Risk (7d+ Missed)", color: "bg-rose-50 text-rose-800 border-rose-300", badge: "bg-rose-500 text-white" },
+      { id: "Renewal Due", label: "Renewal Due", color: "bg-purple-50 text-purple-800 border-purple-300", badge: "bg-purple-200 text-purple-900" }
+    ];
+
+    // Seed Data for Lucknow Leads
+    const INITIAL_LEADS = [
+      {
+        id: "lead-anon-1",
+        visitor_id: "vis-8821a",
+        name: "Gomti Nagar Visitor",
+        phone: "+91 94150 99881 (Anonymous)",
+        locality: "Gomti Nagar",
+        goal: "Weight Loss - 12kg",
+        stage: "Anonymous Visitor",
+        lead_score: 25,
+        assigned_coach: "Unassigned",
+        last_activity: "Viewed Weight Loss Consultation page (3m on site)",
+        last_activity_time: "5m ago",
+        source: "Instagram Lucknow Ad",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-101",
+        visitor_id: "vis-3312",
+        name: "Rajesh Verma",
+        phone: "+91 94150 12345",
+        locality: "Gomti Nagar",
+        goal: "Weight Loss - 15kg",
+        stage: "Lead Captured",
+        lead_score: 45,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Completed 5-step onboarding form with Veg preference",
+        last_activity_time: "12m ago",
+        source: "Google Search Lucknow",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-102",
+        visitor_id: "vis-4491",
+        name: "Pooja Srivastava",
+        phone: "+91 98390 23456",
+        locality: "Hazratganj",
+        goal: "Post-Pregnancy Weight Loss",
+        stage: "WhatsApp Started",
+        lead_score: 75,
+        assigned_coach: "Coach Priya",
+        last_activity: "Replied 'Book Evaluation' to WhatsApp Welcome",
+        last_activity_time: "24m ago",
+        source: "WhatsApp Campaign",
+        diet_preference: "Eggetarian"
+      },
+      {
+        id: "lead-103",
+        visitor_id: "vis-5510",
+        name: "Amitabh Shukla",
+        phone: "+91 94500 34567",
+        locality: "Aliganj",
+        goal: "Metabolic Reset & Fat Loss",
+        stage: "Appointment Scheduled",
+        lead_score: 85,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Confirmed slot for tomorrow 11:00 AM at Gomti Nagar",
+        last_activity_time: "1h ago",
+        source: "Referral (Client Amit)",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-104",
+        visitor_id: "vis-7719",
+        name: "Sunita Yadav",
+        phone: "+91 93350 45678",
+        locality: "Indira Nagar",
+        goal: "Thyroid-friendly Weight Loss",
+        stage: "Consultation Completed",
+        lead_score: 95,
+        assigned_coach: "Coach Priya",
+        last_activity: "In-center Body Composition completed (-2.1kg target set)",
+        last_activity_time: "2h ago",
+        source: "Walk-in Lucknow Center",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-105",
+        visitor_id: "vis-8890",
+        name: "Vikram Singh",
+        phone: "+91 99190 56789",
+        locality: "Mahanagar",
+        goal: "Rapid Fat Loss & Toning",
+        stage: "Active Customer",
+        lead_score: 100,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Completed Day 14 weigh-in: Lost -4.2kg! 🔥 Streak: 8 days",
+        last_activity_time: "Yesterday",
+        source: "Website Direct",
+        diet_preference: "Non-Vegetarian"
+      },
+      {
+        id: "lead-106",
+        visitor_id: "vis-9901",
+        name: "Neha Rastogi",
+        phone: "+91 97930 67890",
+        locality: "Ashiyana",
+        goal: "Clinical Diet & Lifestyle",
+        stage: "At Risk",
+        lead_score: 55,
+        assigned_coach: "Coach Priya",
+        last_activity: "Missed 3 consecutive scheduled visits (8 days inactive)",
+        last_activity_time: "8 days ago",
+        source: "Facebook Lucknow Community",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-107",
+        visitor_id: "vis-1123",
+        name: "Deepak Mishra",
+        phone: "+91 94151 78901",
+        locality: "Gomti Nagar",
+        goal: "90-Day Transformation",
+        stage: "Renewal Due",
+        lead_score: 95,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Program ending in 4 days. Total loss: -8.4kg",
+        last_activity_time: "3h ago",
+        source: "Client Renewal",
+        diet_preference: "Vegetarian"
+      }
+    ];
+
+    function App() {
+      const [leads, setLeads] = useState(() => {
+        const saved = localStorage.getItem('hk_kanban_leads');
+        return saved ? JSON.parse(saved) : INITIAL_LEADS;
+      });
+      const [draggedLeadId, setDraggedLeadId] = useState(null);
+      const [dragOverStage, setDragOverStage] = useState(null);
+      const [filterLocality, setFilterLocality] = useState("All");
+      const [searchTerm, setSearchTerm] = useState("");
+      const [notification, setNotification] = useState(null);
+      const [selectedLead, setSelectedLead] = useState(null);
+      const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+
+      // Save leads locally
+      useEffect(() => {
+        localStorage.setItem('hk_kanban_leads', JSON.stringify(leads));
+      }, [leads]);
+
+      // Initialize Lucide Icons on re-renders
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+
+      // Notification helper
+      const showToast = (msg, type = "success") => {
+        setNotification({ msg, type });
+        setTimeout(() => setNotification(null), 4000);
+      };
+
+      // Filtered Leads
+      const filteredLeads = useMemo(() => {
+        return leads.filter(l => {
+          const matchLocality = filterLocality === "All" || l.locality.toLowerCase().includes(filterLocality.toLowerCase());
+          const matchSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              l.phone.includes(searchTerm) || 
+                              l.goal.toLowerCase().includes(searchTerm.toLowerCase());
+          return matchLocality && matchSearch;
+        });
+      }, [leads, filterLocality, searchTerm]);
+
+      // Handle Drag Start
+      const handleDragStart = (e, leadId) => {
+        e.dataTransfer.setData("text/plain", leadId);
+        setDraggedLeadId(leadId);
+      };
+
+      // Handle Drag Over
+      const handleDragOver = (e, stageId) => {
+        e.preventDefault();
+        setDragOverStage(stageId);
+      };
+
+      // Handle Drag Leave
+      const handleDragLeave = (e) => {
+        e.preventDefault();
+        setDragOverStage(null);
+      };
+
+      // Handle Drop
+      const handleDrop = async (e, targetStageId) => {
+        e.preventDefault();
+        const leadId = e.dataTransfer.getData("text/plain") || draggedLeadId;
+        setDragOverStage(null);
+        setDraggedLeadId(null);
+
+        if (!leadId) return;
+
+        const lead = leads.find(l => l.id === leadId);
+        if (!lead || lead.stage === targetStageId) return;
+
+        // Update stage in state
+        const updatedLeads = leads.map(l => {
+          if (l.id === leadId) {
+            let scoreDelta = 0;
+            let activityNote = `Moved from ${l.stage} to ${targetStageId}`;
+
+            if (targetStageId === "WhatsApp Started") {
+              scoreDelta = 20;
+              activityNote = "Auto-triggered WhatsApp Welcome with interactive buttons";
+            } else if (targetStageId === "Appointment Scheduled") {
+              scoreDelta = 25;
+              activityNote = "Reserved in-center evaluation slot in Gomti Nagar";
+            } else if (targetStageId === "Consultation Completed") {
+              scoreDelta = 30;
+              activityNote = "Completed clinical body composition analysis";
+            }
+
+            return {
+              ...l,
+              stage: targetStageId,
+              lead_score: Math.min(100, l.lead_score + scoreDelta),
+              last_activity: activityNote,
+              last_activity_time: "Just now"
+            };
+          }
+          return l;
+        });
+
+        setLeads(updatedLeads);
+        showToast(`Moved "${lead.name}" to ${targetStageId}!`);
+
+        // If target stage is WhatsApp Started, trigger automated welcome
+        if (targetStageId === "WhatsApp Started") {
+          triggerWelcomeWhatsApp(lead);
+        }
+
+        // Push to Supabase if connected
+        if (supabase) {
+          try {
+            await supabase
+              .from('leads')
+              .update({ 
+                stage: targetStageId, 
+                updated_at: new Date().toISOString() 
+              })
+              .eq('id', leadId);
+          } catch(err) {
+            console.warn("Supabase update skipped (using local sync):", err);
+          }
+        }
+      };
+
+      // Automated WhatsApp Trigger with Interactive Buttons
+      const triggerWelcomeWhatsApp = async (lead) => {
+        setIsSendingWhatsApp(true);
+        const buttons = [
+          { id: "book_eval", title: "Book Evaluation" },
+          { id: "learn_more", title: "Learn More" }
+        ];
+
+        try {
+          if (supabase) {
+            await supabase.functions.invoke('whatsapp-send-template', {
+              body: {
+                to: lead.phone,
+                template_name: "welcome_wellness_lucknow",
+                lead_id: lead.id,
+                customer_name: lead.name,
+                wellness_goal: lead.goal,
+                locality: lead.locality
+              }
+            });
+          }
+        } catch(e) {
+          console.log("Mock WhatsApp triggered:", e);
+        }
+
+        setTimeout(() => {
+          setIsSendingWhatsApp(false);
+          showToast(`WhatsApp interactive welcome dispatched to ${lead.name} (${lead.phone})!`);
+        }, 600);
+      };
+
+      // Quick Call Trigger
+      const handleQuickCall = (lead) => {
+        const updated = leads.map(l => l.id === lead.id ? {
+          ...l,
+          lead_score: Math.min(100, l.lead_score + 5),
+          last_activity: "Logged telephone consultation follow-up (+5 pts)",
+          last_activity_time: "Just now"
+        } : l);
+        setLeads(updated);
+        showToast(`Call logged for ${lead.name}. Lead score +5!`);
+      };
+
+      return (
+        <div className="flex flex-col h-screen overflow-hidden">
+          {/* Top Bar Header */}
+          <header className="bg-white border-b border-gray-200 px-6 py-3 shadow-sm flex flex-wrap items-center justify-between gap-4 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-wellness-700 flex items-center justify-center text-white font-bold shadow-sm">
+                <i data-lucide="spa" className="w-6 h-6"></i>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-black tracking-tight text-wellness-900">Healthy King LIFE</h1>
+                  <span className="text-xs bg-wellness-100 text-wellness-800 font-bold px-2 py-0.5 rounded-full border border-wellness-200">
+                    Lucknow Wellness CRM
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <i data-lucide="map-pin" className="w-3 h-3 text-wellness-orange"></i>
+                  Gomti Nagar Commercial Hub & Hazratganj Centers
+                </p>
+              </div>
+            </div>
+
+            {/* Controls: Search, Locality Filter, Stats */}
+            <div className="flex items-center flex-wrap gap-3">
+              <div className="relative">
+                <input 
+                  type="text" 
+                  placeholder="Search name, phone, goal..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-xs bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-wellness-600 w-52"
+                />
+                <i data-lucide="search" className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5"></i>
+              </div>
+
+              <select 
+                value={filterLocality} 
+                onChange={(e) => setFilterLocality(e.target.value)}
+                className="text-xs bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-1.5 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-wellness-600"
+              >
+                <option value="All">All Lucknow Areas</option>
+                <option value="Gomti Nagar">Gomti Nagar</option>
+                <option value="Hazratganj">Hazratganj</option>
+                <option value="Aliganj">Aliganj</option>
+                <option value="Indira Nagar">Indira Nagar</option>
+                <option value="Mahanagar">Mahanagar</option>
+                <option value="Ashiyana">Ashiyana</option>
+              </select>
+
+              <button 
+                onClick={() => {
+                  setLeads(INITIAL_LEADS);
+                  showToast("Pipeline restored to initial Lucknow demo state");
+                }}
+                className="flex items-center gap-1 text-xs text-gray-600 hover:text-wellness-700 bg-gray-100 hover:bg-gray-200 px-2.5 py-1.5 rounded-lg transition"
+                title="Reset Pipeline"
+              >
+                <i data-lucide="refresh-cw" className="w-3 h-3"></i>
+                <span>Reset</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Toast Notification */}
+          {notification && (
+            <div className="fixed top-16 right-6 z-50 bg-wellness-800 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 border border-wellness-600 animate-bounce">
+              <i data-lucide="check-circle" className="w-4 h-4 text-wellness-yellow"></i>
+              <span>{notification.msg}</span>
+            </div>
+          )}
+
+          {/* Kanban Stage Flow Status Ribbon */}
+          <div className="bg-wellness-50 border-b border-wellness-100 px-6 py-2 flex items-center justify-between text-xs text-wellness-800">
+            <div className="flex items-center gap-2">
+              <span className="font-bold flex items-center gap-1">
+                <i data-lucide="git-commit" className="w-3.5 h-3.5 text-wellness-600"></i>
+                Lead Pipeline Funnel:
+              </span>
+              <span className="text-gray-600">Drag cards across stages to trigger automated WhatsApp messages & score recalculation.</span>
+            </div>
+            <div className="flex items-center gap-4 font-semibold">
+              <span>Total In Funnel: {filteredLeads.length}</span>
+              <span className="text-whatsapp-dark flex items-center gap-1">
+                <i data-lucide="message-circle" className="w-3 h-3 text-whatsapp-base"></i>
+                WhatsApp Engine: Active
+              </span>
+            </div>
+          </div>
+
+          {/* Kanban Horizontal Board */}
+          <main className="flex-1 overflow-x-auto p-6 bg-[#F5F7F2]">
+            <div className="flex gap-4 items-start h-full pb-4">
+              {STAGES.map((stage) => {
+                const stageLeads = filteredLeads.filter(l => l.stage === stage.id);
+                const isOver = dragOverStage === stage.id;
+
+                return (
+                  <div 
+                    key={stage.id}
+                    onDragOver={(e) => handleDragOver(e, stage.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, stage.id)}
+                    className={`kanban-col flex flex-col h-full bg-white rounded-2xl border transition-all duration-200 shadow-sm ${
+                      isOver ? 'kanban-drag-over' : 'border-gray-200'
+                    }`}
+                  >
+                    {/* Column Header */}
+                    <div className="p-3.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/70 rounded-t-2xl">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${
+                          stage.id === 'WhatsApp Started' ? 'bg-whatsapp-base' : 
+                          stage.id === 'At Risk' ? 'bg-rose-500' : 'bg-wellness-600'
+                        }`}></span>
+                        <h2 className="font-bold text-xs text-gray-800 tracking-wide uppercase">{stage.label}</h2>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${stage.badge}`}>
+                        {stageLeads.length}
+                      </span>
+                    </div>
+
+                    {/* Cards Container */}
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                      {stageLeads.length === 0 ? (
+                        <div className="h-32 flex flex-col items-center justify-center text-center p-4 border border-dashed border-gray-200 rounded-xl bg-gray-50/50">
+                          <p className="text-xs text-gray-400">No leads in this stage</p>
+                          <span className="text-[10px] text-gray-300 mt-1">Drag a lead card here</span>
+                        </div>
+                      ) : (
+                        stageLeads.map((lead) => {
+                          const isBeingDragged = draggedLeadId === lead.id;
+                          const isHot = lead.lead_score >= 80;
+                          const isWarm = lead.lead_score >= 50 && lead.lead_score < 80;
+
+                          return (
+                            <div
+                              key={lead.id}
+                              draggable="true"
+                              onDragStart={(e) => handleDragStart(e, lead.id)}
+                              className={`bg-white rounded-xl p-3.5 border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative ${
+                                isBeingDragged ? 'opacity-40 scale-95' : 'opacity-100'
+                              }`}
+                            >
+                              {/* Card Header: Name & Score */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h3 className="font-bold text-sm text-gray-900 group-hover:text-wellness-700 transition">
+                                    {lead.name}
+                                  </h3>
+                                  <p className="text-xs text-gray-500 font-mono flex items-center gap-1 mt-0.5">
+                                    <i data-lucide="phone" className="w-3 h-3 text-gray-400"></i>
+                                    {lead.phone}
+                                  </p>
+                                </div>
+
+                                <div className={`text-[11px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 ${
+                                  isHot ? 'bg-orange-100 text-orange-700' :
+                                  isWarm ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'
+                                }`}>
+                                  {isHot && <i data-lucide="flame" className="w-3 h-3 text-wellness-orange"></i>}
+                                  <span>{lead.lead_score}</span>
+                                </div>
+                              </div>
+
+                              {/* Locality & Goal Tags */}
+                              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                <span className="text-[10px] font-semibold bg-orange-50 text-wellness-orange px-2 py-0.5 rounded-md flex items-center gap-1 border border-orange-100">
+                                  <i data-lucide="map-pin" className="w-2.5 h-2.5"></i>
+                                  {lead.locality}
+                                </span>
+                                <span className="text-[10px] font-medium bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-100">
+                                  {lead.goal}
+                                </span>
+                              </div>
+
+                              {/* Last Activity */}
+                              <div className="mt-3 p-2 bg-gray-50 rounded-lg border border-gray-100 text-[11px] text-gray-600">
+                                <div className="flex items-center justify-between text-gray-400 text-[10px] mb-0.5">
+                                  <span className="font-medium text-gray-500 flex items-center gap-1">
+                                    <i data-lucide="clock" className="w-2.5 h-2.5"></i>
+                                    Last Activity
+                                  </span>
+                                  <span>{lead.last_activity_time}</span>
+                                </div>
+                                <p className="line-clamp-2 leading-tight text-gray-700 font-medium">
+                                  {lead.last_activity}
+                                </p>
+                              </div>
+
+                              {/* Coach & Source */}
+                              <div className="mt-2 flex items-center justify-between text-[10px] text-gray-400">
+                                <span>Coach: <b className="text-gray-600">{lead.assigned_coach}</b></span>
+                                <span>{lead.source}</span>
+                              </div>
+
+                              {/* Interactive Quick Actions */}
+                              <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center gap-1.5">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerWelcomeWhatsApp(lead);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 bg-[#25D366] hover:bg-[#1EBE5D] text-white text-[11px] font-bold py-1.5 px-2 rounded-lg shadow-sm transition"
+                                  title="Dispatch WhatsApp Welcome with Buttons"
+                                >
+                                  <i data-lucide="message-circle" className="w-3 h-3"></i>
+                                  <span>WhatsApp</span>
+                                </button>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleQuickCall(lead);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 bg-wellness-700 hover:bg-wellness-800 text-white text-[11px] font-bold py-1.5 px-2 rounded-lg shadow-sm transition"
+                                  title="Log Phone Call"
+                                >
+                                  <i data-lucide="phone-call" className="w-3 h-3"></i>
+                                  <span>Call (+5)</span>
+                                </button>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLead(lead);
+                                  }}
+                                  className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition"
+                                  title="View Details"
+                                >
+                                  <i data-lucide="eye" className="w-3.5 h-3.5"></i>
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </main>
+
+          {/* Lead Detail Modal */}
+          {selectedLead && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">{selectedLead.name}</h2>
+                    <p className="text-xs text-gray-500">{selectedLead.phone} • {selectedLead.locality}</p>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedLead(null)}
+                    className="p-1 text-gray-400 hover:text-gray-700 rounded-lg"
+                  >
+                    <i data-lucide="x" className="w-5 h-5"></i>
+                  </button>
+                </div>
+
+                <div className="mt-4 space-y-3 text-xs">
+                  <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl">
+                    <div><span className="text-gray-400">Current Stage:</span> <b className="text-wellness-800">{selectedLead.stage}</b></div>
+                    <div><span className="text-gray-400">Lead Score:</span> <b className="text-wellness-orange">{selectedLead.lead_score}/100</b></div>
+                    <div><span className="text-gray-400">Diet:</span> <b>{selectedLead.diet_preference}</b></div>
+                    <div><span className="text-gray-400">Coach:</span> <b>{selectedLead.assigned_coach}</b></div>
+                  </div>
+
+                  <div className="border border-green-200 bg-green-50 p-3 rounded-xl">
+                    <p className="font-bold text-green-900 mb-1 flex items-center gap-1">
+                      <i data-lucide="message-circle" className="w-3.5 h-3.5 text-whatsapp-base"></i>
+                      WhatsApp Interactive Message Preview:
+                    </p>
+                    <p className="text-gray-700 italic">
+                      "Namaste {selectedLead.name} Ji! 🙏 Welcome to Healthy King LIFE Lucknow. We have reserved your evaluation slot for {selectedLead.goal}."
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <span className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-bold text-gray-700">
+                        🔘 Book Evaluation
+                      </span>
+                      <span className="bg-white border border-gray-300 rounded px-2 py-1 text-[10px] font-bold text-gray-700">
+                        🔘 Learn More
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex justify-end gap-2">
+                  <button
+                    onClick={() => setSelectedLead(null)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-semibold hover:bg-gray-200 transition"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      triggerWelcomeWhatsApp(selectedLead);
+                      setSelectedLead(null);
+                    }}
+                    className="px-4 py-2 bg-whatsapp-base hover:bg-whatsapp-dark text-white rounded-xl text-xs font-bold transition flex items-center gap-1"
+                  >
+                    <i data-lucide="send" className="w-3.5 h-3.5"></i>
+                    Send WhatsApp Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="0"
+        android:translateY="0">
+        <!-- Golden crown top element for 'King' -->
+        <path
+            android:pathData="M38,40 L44,48 L54,34 L64,48 L70,40 L68,52 L40,52 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:endX="70"
+                    android:endY="52"
+                    android:startX="38"
+                    android:startY="34"
+                    android:type="linear">
+                    <item android:color="#FDE047" android:offset="0.0" />
+                    <item android:color="#F59E0B" android:offset="0.5" />
+                    <item android:color="#EA580C" android:offset="1.0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- Wellness Leaf & Active Life Silhouette in Center -->
+        <path
+            android:pathData="M54,49 C46,55 36,63 42,75 C45,81 54,84 54,84 C54,84 63,81 66,75 C72,63 62,55 54,49 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:endX="66"
+                    android:endY="84"
+                    android:startX="42"
+                    android:startY="49"
+                    android:type="linear">
+                    <item android:color="#84CC16" android:offset="0.0" />
+                    <item android:color="#22C55E" android:offset="0.5" />
+                    <item android:color="#16A34A" android:offset="1.0" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- Energetic central life sprout / heart highlight -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,58 C51,62 47,66 50,71 C51.5,73.5 54,76 54,76 C54,76 56.5,73.5 58,71 C61,66 57,62 54,58 Z" />
+        <!-- Crown jewels / accent dots -->
+        <path
+            android:fillColor="#FEF08A"
+            android:pathData="M38,38m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0" />
+        <path
+            android:fillColor="#FEF08A"
+            android:pathData="M54,32m-2.5,0a2.5,2.5 0 1,0 5,0a2.5,2.5 0 1,0 -5,0" />
+        <path
+            android:fillColor="#FEF08A"
+            android:pathData="M70,38m-2.2,0a2.2,2.2 0 1,0 4.4,0a2.2,2.2 0 1,0 -4.4,0" />
+    </group>
+</vector>

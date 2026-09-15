@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Healthy King LIFE - Lead Funnel Kanban Board (Lucknow)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            wellness: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+              cream: '#FAFAF5',
+              orange: '#EA580C',
+              yellow: '#F59E0B'
+            },
+            whatsapp: {
+              light: '#DCFCE7',
+              base: '#25D366',
+              dark: '#128C7E'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- React & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .kanban-col {
+      min-width: 290px;
+      max-width: 320px;
+    }
+    .kanban-drag-over {
+      background-color: #f0fdf4 !important;
+      border: 2px dashed #059669 !important;
+    }
+    ::-webkit-scrollbar {
+      height: 8px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAF6] text-gray-800 font-sans antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const SUPABASE_URL = window.SUPABASE_URL || localStorage.getItem('HK_SUPABASE_URL') || "https://example.supabase.co";
+    const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || localStorage.getItem('HK_SUPABASE_ANON_KEY') || "dummy-anon-key";
+    
+    let supabase = null;
+    try {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } catch(e) {
+      console.warn("Supabase init fallback:", e);
+    }
+
+    const STAGES = [
+      { id: "Anonymous Visitor", label: "Anonymous Visitor", color: "bg-slate-100 text-slate-700 border-slate-300", badge: "bg-slate-200 text-slate-800" },
+      { id: "Lead Captured", label: "Lead Captured", color: "bg-emerald-50 text-emerald-800 border-emerald-300", badge: "bg-emerald-200 text-emerald-900" },
+      { id: "Wellness Goal Selected", label: "Goal Selected", color: "bg-teal-50 text-teal-800 border-teal-300", badge: "bg-teal-200 text-teal-900" },
+      { id: "WhatsApp Started", label: "WhatsApp Started", color: "bg-green-50 text-green-800 border-green-400", badge: "bg-green-500 text-white" },
+      { id: "Appointment Scheduled", label: "Appointment Booked", color: "bg-amber-50 text-amber-800 border-amber-300", badge: "bg-amber-200 text-amber-900" },
+      { id: "Consultation Completed", label: "Consultation Done", color: "bg-blue-50 text-blue-800 border-blue-300", badge: "bg-blue-200 text-blue-900" },
+      { id: "Active Customer", label: "Active Customer", color: "bg-emerald-100 text-emerald-900 border-emerald-400", badge: "bg-emerald-600 text-white" },
+      { id: "At Risk", label: "At Risk (7d+ Missed)", color: "bg-rose-50 text-rose-800 border-rose-300", badge: "bg-rose-500 text-white" },
+      { id: "Renewal Due", label: "Renewal Due", color: "bg-purple-50 text-purple-800 border-purple-300", badge: "bg-purple-200 text-purple-900" }
+    ];
+
+    const INITIAL_LEADS = [
+      {
+        id: "lead-anon-1",
+        visitor_id: "vis-8821a",
+        name: "Gomti Nagar Visitor",
+        phone: "+91 94150 99881 (Anonymous)",
+        locality: "Gomti Nagar",
+        goal: "Weight Loss - 12kg",
+        stage: "Anonymous Visitor",
+        lead_score: 25,
+        assigned_coach: "Unassigned",
+        last_activity: "Viewed Weight Loss Consultation page (3m on site)",
+        last_activity_time: "5m ago",
+        source: "Instagram Lucknow Ad",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-101",
+        visitor_id: "vis-3312",
+        name: "Rajesh Verma",
+        phone: "+91 94150 12345",
+        locality: "Gomti Nagar",
+        goal: "Weight Loss - 15kg",
+        stage: "Lead Captured",
+        lead_score: 45,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Completed 5-step onboarding form with Veg preference",
+        last_activity_time: "12m ago",
+        source: "Google Search Lucknow",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-102",
+        visitor_id: "vis-4491",
+        name: "Pooja Srivastava",
+        phone: "+91 98390 23456",
+        locality: "Hazratganj",
+        goal: "Post-Pregnancy Weight Loss",
+        stage: "WhatsApp Started",
+        lead_score: 75,
+        assigned_coach: "Coach Priya",
+        last_activity: "Replied 'Book Evaluation' to WhatsApp Welcome",
+        last_activity_time: "24m ago",
+        source: "WhatsApp Campaign",
+        diet_preference: "Eggetarian"
+      },
+      {
+        id: "lead-103",
+        visitor_id: "vis-5510",
+        name: "Amitabh Shukla",
+        phone: "+91 94500 34567",
+        locality: "Aliganj",
+        goal: "Metabolic Reset & Fat Loss",
+        stage: "Appointment Scheduled",
+        lead_score: 85,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Confirmed slot for tomorrow 11:00 AM at Gomti Nagar",
+        last_activity_time: "1h ago",
+        source: "Referral (Client Amit)",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-104",
+        visitor_id: "vis-7719",
+        name: "Sunita Yadav",
+        phone: "+91 93350 45678",
+        locality: "Indira Nagar",
+        goal: "Thyroid-friendly Weight Loss",
+        stage: "Consultation Completed",
+        lead_score: 95,
+        assigned_coach: "Coach Priya",
+        last_activity: "In-center Body Composition completed (-2.1kg target set)",
+        last_activity_time: "2h ago",
+        source: "Walk-in Lucknow Center",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-105",
+        visitor_id: "vis-8890",
+        name: "Vikram Singh",
+        phone: "+91 99190 56789",
+        locality: "Mahanagar",
+        goal: "Rapid Fat Loss & Toning",
+        stage: "Active Customer",
+        lead_score: 100,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Completed Day 14 weigh-in: Lost -4.2kg! 🔥 Streak: 8 days",
+        last_activity_time: "Yesterday",
+        source: "Website Direct",
+        diet_preference: "Non-Vegetarian"
+      },
+      {
+        id: "lead-106",
+        visitor_id: "vis-9901",
+        name: "Neha Rastogi",
+        phone: "+91 97930 67890",
+        locality: "Ashiyana",
+        goal: "Clinical Diet & Lifestyle",
+        stage: "At Risk",
+        lead_score: 55,
+        assigned_coach: "Coach Priya",
+        last_activity: "Missed 3 consecutive scheduled visits (8 days inactive)",
+        last_activity_time: "8 days ago",
+        source: "Facebook Lucknow Community",
+        diet_preference: "Vegetarian"
+      },
+      {
+        id: "lead-107",
+        visitor_id: "vis-1123",
+        name: "Deepak Mishra",
+        phone: "+91 94151 78901",
+        locality: "Gomti Nagar",
+        goal: "90-Day Transformation",
+        stage: "Renewal Due",
+        lead_score: 95,
+        assigned_coach: "Dr. Ananya Verma",
+        last_activity: "Program ending in 4 days. Total loss: -8.4kg",
+        last_activity_time: "3h ago",
+        source: "Client Renewal",
+        diet_preference: "Vegetarian"
+      }
+    ];
+
+    function App() {
+      const [leads, setLeads] = useState(() => {
+        const saved = localStorage.getItem('hk_kanban_leads');
+        return saved ? JSON.parse(saved) : INITIAL_LEADS;
+      });
+      const [draggedLeadId, setDraggedLeadId] = useState(null);
+      const [dragOverStage, setDragOverStage] = useState(null);
+      const [filterLocality, setFilterLocality] = useState("All");
+      const [searchTerm, setSearchTerm] = useState("");
+      const [notification, setNotification] = useState(null);
+      const [selectedLead, setSelectedLead] = useState(null);
+
+      useEffect(() => {
+        localStorage.setItem('hk_kanban_leads', JSON.stringify(leads));
+      }, [leads]);
+
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      });
+
+      const showToast = (msg) => {
+        setNotification(msg);
+        setTimeout(() => setNotification(null), 3500);
+      };
+
+      const filteredLeads = useMemo(() => {
+        return leads.filter(l => {
+          const matchLocality = filterLocality === "All" || l.locality.toLowerCase().includes(filterLocality.toLowerCase());
+          const matchSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              l.phone.includes(searchTerm) || 
+                              l.goal.toLowerCase().includes(searchTerm.toLowerCase());
+          return matchLocality && matchSearch;
+        });
+      }, [leads, filterLocality, searchTerm]);
+
+      const handleDragStart = (e, leadId) => {
+        e.dataTransfer.setData("text/plain", leadId);
+        setDraggedLeadId(leadId);
+      };
+
+      const handleDragOver = (e, stageId) => {
+        e.preventDefault();
+        setDragOverStage(stageId);
+      };
+
+      const handleDragLeave = (e) => {
+        e.preventDefault();
+        setDragOverStage(null);
+      };
+
+      const handleDrop = async (e, targetStageId) => {
+        e.preventDefault();
+        const leadId = e.dataTransfer.getData("text/plain") || draggedLeadId;
+        setDragOverStage(null);
+        setDraggedLeadId(null);
+
+        if (!leadId) return;
+        const lead = leads.find(l => l.id === leadId);
+        if (!lead || lead.stage === targetStageId) return;
+
+        const updatedLeads = leads.map(l => {
+          if (l.id === leadId) {
+            let scoreDelta = 0;
+            let note = `Moved to ${targetStageId}`;
+            if (targetStageId === "WhatsApp Started") {
+              scoreDelta = 20;
+              note = "Dispatched WhatsApp Welcome with interactive buttons";
+            } else if (targetStageId === "Appointment Scheduled") {
+              scoreDelta = 25;
+              note = "Reserved in-center slot at Gomti Nagar";
+            } else if (targetStageId === "Consultation Completed") {
+              scoreDelta = 30;
+              note = "Completed clinical assessment";
+            }
+
+            return {
+              ...l,
+              stage: targetStageId,
+              lead_score: Math.min(100, l.lead_score + scoreDelta),
+              last_activity: note,
+              last_activity_time: "Just now"
+            };
+          }
+          return l;
+        });
+
+        setLeads(updatedLeads);
+        showToast(`Moved ${lead.name} to ${targetStageId}`);
+
+        if (targetStageId === "WhatsApp Started") {
+          triggerWelcomeWhatsApp(lead);
+        }
+
+        if (supabase) {
+          try {
+            await supabase.from('leads').update({ stage: targetStageId }).eq('id', leadId);
+          } catch(e) {}
+        }
+      };
+
+      const triggerWelcomeWhatsApp = (lead) => {
+        showToast(`Dispatched WhatsApp with interactive buttons ('Book Evaluation', 'Learn More') to ${lead.name}!`);
+      };
+
+      return (
+        <div className="flex flex-col h-screen overflow-hidden">
+          <header className="bg-white border-b border-gray-200 px-4 py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2 z-10">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-wellness-700 flex items-center justify-center text-white font-bold">
+                <i data-lucide="spa" className="w-4 h-4"></i>
+              </div>
+              <div>
+                <h1 className="text-base font-black text-wellness-900 leading-tight">Healthy King LIFE</h1>
+                <p className="text-[10px] text-gray-500">Lucknow Lead Pipeline (React + Tailwind + Drag & Drop)</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input 
+                type="text" 
+                placeholder="Search leads..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-2.5 py-1 text-xs bg-gray-50 border border-gray-300 rounded-lg w-36"
+              />
+              <select 
+                value={filterLocality} 
+                onChange={(e) => setFilterLocality(e.target.value)}
+                className="text-xs bg-gray-50 border border-gray-300 rounded-lg px-2 py-1"
+              >
+                <option value="All">All Lucknow</option>
+                <option value="Gomti Nagar">Gomti Nagar</option>
+                <option value="Hazratganj">Hazratganj</option>
+                <option value="Aliganj">Aliganj</option>
+                <option value="Indira Nagar">Indira Nagar</option>
+              </select>
+            </div>
+          </header>
+
+          {notification && (
+            <div className="fixed top-12 right-4 z-50 bg-wellness-800 text-white text-xs px-3 py-2 rounded-xl shadow-lg flex items-center gap-1.5 border border-wellness-600">
+              <i data-lucide="check-circle" className="w-3.5 h-3.5 text-wellness-yellow"></i>
+              <span>{notification}</span>
+            </div>
+          )}
+
+          <main className="flex-1 overflow-x-auto p-4 bg-[#F5F7F2]">
+            <div className="flex gap-3 items-start h-full pb-2">
+              {STAGES.map((stage) => {
+                const stageLeads = filteredLeads.filter(l => l.stage === stage.id);
+                const isOver = dragOverStage === stage.id;
+
+                return (
+                  <div 
+                    key={stage.id}
+                    onDragOver={(e) => handleDragOver(e, stage.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, stage.id)}
+                    className={`kanban-col flex flex-col h-full bg-white rounded-xl border transition-all shadow-sm ${
+                      isOver ? 'kanban-drag-over' : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="p-2.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/80 rounded-t-xl">
+                      <span className="font-bold text-xs text-gray-800">{stage.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${stage.badge}`}>
+                        {stageLeads.length}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5">
+                      {stageLeads.map((lead) => (
+                        <div
+                          key={lead.id}
+                          draggable="true"
+                          onDragStart={(e) => handleDragStart(e, lead.id)}
+                          className="bg-white rounded-lg p-3 border border-gray-200 shadow-sm hover:shadow cursor-grab active:cursor-grabbing"
+                        >
+                          <div className="flex items-start justify-between">
+                            <h3 className="font-bold text-xs text-gray-900">{lead.name}</h3>
+                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">
+                              {lead.lead_score}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-mono mt-0.5">{lead.phone}</p>
+                          <div className="mt-1 flex gap-1">
+                            <span className="text-[9px] bg-orange-50 text-wellness-orange px-1.5 py-0.5 rounded font-semibold">
+                              {lead.locality}
+                            </span>
+                            <span className="text-[9px] bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded">
+                              {lead.goal}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded">
+                            <span className="text-gray-400">Activity:</span> {lead.last_activity}
+                          </p>
+
+                          <div className="mt-2.5 pt-2 border-t border-gray-100 flex gap-1">
+                            <button
+                              onClick={() => triggerWelcomeWhatsApp(lead)}
+                              className="flex-1 bg-[#25D366] text-white text-[10px] font-bold py-1 px-1.5 rounded flex items-center justify-center gap-1"
+                            >
+                              <i data-lucide="message-circle" className="w-2.5 h-2.5"></i>
+                              <span>WhatsApp</span>
+                            </button>
+                            <button
+                              onClick={() => setSelectedLead(lead)}
+                              className="bg-gray-100 text-gray-600 text-[10px] py-1 px-2 rounded"
+                            >
+                              Details
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </main>
+
+          {selectedLead && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl max-w-sm w-full p-4 shadow-xl border border-gray-200">
+                <h2 className="text-sm font-bold text-gray-900">{selectedLead.name}</h2>
+                <p className="text-[11px] text-gray-500">{selectedLead.phone} • {selectedLead.locality}</p>
+                <div className="mt-3 text-xs bg-green-50 p-2.5 rounded-lg border border-green-200">
+                  <p className="font-bold text-green-900 text-[11px]">Interactive WhatsApp Buttons:</p>
+                  <p className="text-[11px] text-gray-700 mt-1">
+                    "Namaste {selectedLead.name} Ji! We have reserved your evaluation slot for {selectedLead.goal}."
+                  </p>
+                  <div className="mt-2 flex gap-1.5">
+                    <span className="bg-white border rounded px-1.5 py-0.5 text-[9px] font-bold">🔘 Book Evaluation</span>
+                    <span className="bg-white border rounded px-1.5 py-0.5 text-[9px] font-bold">🔘 Learn More</span>
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button onClick={() => setSelectedLead(null)} className="px-3 py-1 bg-gray-100 text-xs rounded">Close</button>
+                  <button onClick={() => { triggerWelcomeWhatsApp(selectedLead); setSelectedLead(null); }} className="px-3 py-1 bg-whatsapp-base text-white text-xs font-bold rounded">Send</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

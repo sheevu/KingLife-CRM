@@ -1,0 +1,6 @@
+{
+  "name": "Healthy King LIFE",
+  "description": "Mobile-first CRM, customer acquisition, WhatsApp automation and wellness management platform for Healthy King LIFE Weight Loss Wellness Center, Lucknow.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
